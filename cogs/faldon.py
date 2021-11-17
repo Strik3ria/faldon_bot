@@ -2,7 +2,7 @@ from discord.ext import commands
 
 from .utils.send import send
 from .utils.proper_case import proper_case
-from .utils.spells import spells
+from .utils.spells import spells, get_spells_by_type, sort_spells_by_start
 from .utils.prefixes import prefixes
 from .utils.suffixes import suffixes
 from .utils.find_suffix import find_suffix
@@ -27,6 +27,8 @@ class Faldon(commands.Cog):
         spell = [proper_case(s) for s in spell]
         spell = str.join(" ", spell)
 
+        response = ""
+
         try:
             selected_spell = spells[spell.lower()]
             response = (
@@ -37,8 +39,24 @@ class Faldon(commands.Cog):
                 f"{selected_spell['fizzle_stop']}."
             )
         except KeyError as error:
-            response = "The spell you are looking for was not found."
-            print(f"spell: {error} is probably not a spell.")
+
+            try:
+                response = (
+                    f"The following spells are available for {spell}:\n\n"
+                    f"ex: spell name: starts - fizzle end\n\n"
+                )
+
+                unsorted_spells = get_spells_by_type(spell)
+                sorted_spells = sort_spells_by_start(unsorted_spells)
+
+                for spell in sorted_spells:
+                    response += (
+                        f"{spell}:\t{sorted_spells[spell]['skill_begin']} - "
+                        f"{sorted_spells[spell]['fizzle_stop']}\n"
+                    )
+            except ValueError as error:
+                response = "The spell or spell type you are looking for was not found."
+                print(f"spell: {error} is probably not a spell or spell type.")
 
         await send(ctx, response)
 
@@ -222,6 +240,34 @@ class Faldon(commands.Cog):
             if len(response) > 1800:
                 await send(ctx, response)
                 response = ""
+
+        await send(ctx, response)
+
+    @commands.command()
+    async def test(self, ctx, *spell_type):
+        if len(spell_type) == 0:
+            response = (
+                "Make sure to give me a spell type to look up for you. "
+                "ex. '!spell elemental magics'"
+            )
+            await send(ctx, response)
+            return
+
+        spell_type = " ".join(spell_type).title()
+
+        response = (
+            f"The following spells are available for {spell_type}:\n\n"
+            f"ex: spell name: starts - fizzle end\n\n"
+        )
+
+        unsorted_spells = get_spells_by_type(spell_type)
+        sorted_spells = sort_spells_by_start(unsorted_spells)
+
+        for spell in sorted_spells:
+            response += (
+                f"{spell}:\t{sorted_spells[spell]['skill_begin']} - "
+                f"{sorted_spells[spell]['fizzle_stop']}\n"
+            )
 
         await send(ctx, response)
 
